@@ -24,6 +24,9 @@ app.use(express.static(__dirname));
 app.use(bodyParser.json());
 app.use(bodyParser.urlencoded({extended: false}));
 
+// use the built-in ES6 promise as mongoose Promise library (default may be deprecated)
+mongoose.Promise = Promise;
+
 mongoose.connect(dbUrl, {
 		useNewUrlParser: true,
 		useUnifiedTopology: true
@@ -45,14 +48,23 @@ app.post('/messages', (req, res) => {
 	// create object based on the mongo Model
 	let message = new MessageModel(req.body);
 
-	message.save( (err) => {
-	    if(err) {
-	    	res.sendStatus(500);
-	    }
+	message.save().then( () => {
+		console.log('Saved!');
+		return MessageModel.findOne({message: 'badWord'});	// returning Promise, next then will take the result of first Promise
+	})
+	.then( (censoredWord) => {		// filtered words will be deleted
+		if(censoredWord) {
+			console.log("censored word(s) found:", censoredWord);
+			return MessageModel.remove({_id: censoredWord.id});	// node handles the id!
+		}
 
-			io.emit('message', req.body);
-	    res.sendStatus(200);
-	});
+		io.emit('message', req.body);
+	  res.sendStatus(200);
+	})
+	.catch( (err) => {
+			res.sendStatus(500);
+			return console.log(err);
+	})
 })
 
 io.on('connection', socket => {

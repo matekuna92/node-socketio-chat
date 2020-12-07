@@ -1,0 +1,9 @@
+npm install --save-dev jasmine
+
+1. create spec folder:
+./node_modules/.bin/jasmine init
+2. package.json -> change "test" script to jasmine
+3. npm test -> tests located in the spec folder as .spec.js files
+4. npm install --save-dev request -> cant write http request natively in tests, package needed
+
+

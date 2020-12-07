@@ -44,27 +44,40 @@ app.get('/messages', (req, res) => {
 	});
 })
 
-app.post('/messages', (req, res) => {
-	// create object based on the mongo Model
-	let message = new MessageModel(req.body);
+app.get('/messages/:user', (req, res) => {
+	let user = req.params.user;
+	MessageModel.find({name: user}, (err, messages) => {	// find all messages, if posted by given user
+		res.send(messages);
+	});
+})
 
-	message.save().then( () => {
+app.post('/messages', async (req, res) => {
+
+	try {
+		// create object based on the mongo Model
+		let message = new MessageModel(req.body);
+
+		let saveMessage = await message.save();
 		console.log('Saved!');
-		return MessageModel.findOne({message: 'badWord'});	// returning Promise, next then will take the result of first Promise
-	})
-	.then( (censoredWord) => {		// filtered words will be deleted
-		if(censoredWord) {
-			console.log("censored word(s) found:", censoredWord);
-			return MessageModel.remove({_id: censoredWord.id});	// node handles the id!
-		}
 
-		io.emit('message', req.body);
-	  res.sendStatus(200);
-	})
-	.catch( (err) => {
-			res.sendStatus(500);
-			return console.log(err);
-	})
+		let censoredWord = MessageModel.findOne({message: 'badWord'});
+			// filtered words will be deleted
+			if(censoredWord) {
+			 await MessageModel.remove({_id: censoredWord.id});	// node handles the id!
+			}
+			else {
+				io.emit('message', req.body);
+			}
+
+		  res.sendStatus(200);
+	}
+	catch(error) {
+		res.sendStatus(500);
+		return console.error(error);
+	}
+	finally {
+		console.log('message post called');
+	}
 })
 
 io.on('connection', socket => {
